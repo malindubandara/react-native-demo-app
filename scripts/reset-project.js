@@ -40,6 +40,22 @@ export default function RootLayout() {
 }
 `;
 
+const moveDirectory = async (sourcePath, destinationPath) => {
+  try {
+    await fs.promises.rename(sourcePath, destinationPath);
+  } catch (error) {
+    if (error.code !== "EPERM" && error.code !== "EXDEV") {
+      throw error;
+    }
+
+    await fs.promises.cp(sourcePath, destinationPath, {
+      recursive: true,
+      errorOnExist: true,
+    });
+    await fs.promises.rm(sourcePath, { recursive: true, force: true });
+  }
+};
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -59,7 +75,7 @@ const moveDirectories = async (userInput) => {
       if (fs.existsSync(oldDirPath)) {
         if (userInput === "y") {
           const newDirPath = path.join(root, exampleDir, dir);
-          await fs.promises.rename(oldDirPath, newDirPath);
+          await moveDirectory(oldDirPath, newDirPath);
           console.log(`➡️ /${dir} moved to /${exampleDir}/${dir}.`);
         } else {
           await fs.promises.rm(oldDirPath, { recursive: true, force: true });
@@ -91,7 +107,7 @@ const moveDirectories = async (userInput) => {
         userInput === "y"
           ? `\n3. Delete the /${exampleDir} directory when you're done referencing it.`
           : ""
-      }`
+      }`,
     );
   } catch (error) {
     console.error(`❌ Error during script execution: ${error.message}`);
@@ -108,5 +124,5 @@ rl.question(
       console.log("❌ Invalid input. Please enter 'Y' or 'N'.");
       rl.close();
     }
-  }
+  },
 );
